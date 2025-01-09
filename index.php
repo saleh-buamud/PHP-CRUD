@@ -18,9 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if (isset($_POST['task_id']) && $_POST['task_id'] !== '') {
                 $id = intval($_POST['task_id']);
                 $_SESSION['crud_list'][$id] = ['task' => $task, 'status' => $status, 'timestamp' => $timestamp]; // Update the existing record
+                // Add success message with SweetAlert
+                echo "<script>Swal.fire('Updated!', 'Task has been updated successfully!', 'success');</script>";
             } else {
                 // Add a new record if no ID exists
                 $_SESSION['crud_list'][] = ['task' => $task, 'status' => $status, 'timestamp' => $timestamp];
+                // Add success message with SweetAlert
+                echo "<script>Swal.fire('Added!', 'Task has been added successfully!', 'success');</script>";
             }
         }
     }
@@ -30,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $id = intval($_POST['delete_id']);
         unset($_SESSION['crud_list'][$id]); // Remove the record from the list
         $_SESSION['crud_list'] = array_values($_SESSION['crud_list']); // Reindex the array to keep it sequential
+        // Add success message with SweetAlert
+        echo "<script>Swal.fire('Deleted!', 'Task has been deleted successfully!', 'success');</script>";
     }
 }
 
@@ -66,6 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['search'])) {
 
     <!-- Add Animate.css for animations -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+    <!-- Add SweetAlert2 JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-light">
@@ -152,6 +161,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['search'])) {
                 1000); // Remove the animation after 1 second
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 </body>
 
 </html>
