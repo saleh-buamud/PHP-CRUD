@@ -9,16 +9,18 @@ if (!isset($_SESSION['crud_list'])) {
 
 // Process POST request to add or update records
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['task'])) {
+    if (isset($_POST['task']) && isset($_POST['status'])) {
         $task = htmlspecialchars($_POST['task']); // Sanitize the input to prevent XSS attacks
+        $status = $_POST['status']; // Get the status
+        $timestamp = date('Y-m-d H:i:s'); // Get the current time
         if (!empty($task)) {
             // Check if there's an ID for updating the record
             if (isset($_POST['task_id']) && $_POST['task_id'] !== '') {
                 $id = intval($_POST['task_id']);
-                $_SESSION['crud_list'][$id] = $task; // Update the existing record
+                $_SESSION['crud_list'][$id] = ['task' => $task, 'status' => $status, 'timestamp' => $timestamp]; // Update the existing record
             } else {
                 // Add a new record if no ID exists
-                $_SESSION['crud_list'][] = $task;
+                $_SESSION['crud_list'][] = ['task' => $task, 'status' => $status, 'timestamp' => $timestamp];
             }
         }
     }
@@ -37,10 +39,13 @@ $search_results = $_SESSION['crud_list'];
 // Handle search functionality
 if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['search'])) {
     $search_query = htmlspecialchars($_GET['search']); // Sanitize the search input
-    if (!empty($search_query)) {
-        // Filter the tasks array based on search query
-        $search_results = array_filter($_SESSION['crud_list'], function ($task) use ($search_query) {
-            return stripos($task, $search_query) !== false; // Case-insensitive search
+    $filter_status = isset($_GET['filter_status']) ? $_GET['filter_status'] : ''; // Get the filter status
+    if (!empty($search_query) || !empty($filter_status)) {
+        // Filter the tasks array based on search query and filter status
+        $search_results = array_filter($_SESSION['crud_list'], function ($taskData) use ($search_query, $filter_status) {
+            $matchQuery = stripos($taskData['task'], $search_query) !== false;
+            $matchStatus = $filter_status ? $taskData['status'] === $filter_status : true;
+            return $matchQuery && $matchStatus;
         });
     }
 }
@@ -75,6 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['search'])) {
                 <input type="text" id="task" name="task" class="form-control"
                     placeholder="Enter your task here" required>
             </div>
+            <div class="mb-3">
+                <label for="status" class="form-label">Status:</label>
+                <select id="status" name="status" class="form-control">
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
             <button type="submit" class="btn btn-primary w-100 animate__animated">Save</button>
         </form>
 
@@ -83,6 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['search'])) {
             <div class="input-group">
                 <input type="text" name="search" class="form-control" placeholder="Search tasks..."
                     value="<?php echo isset($search_query) ? $search_query : ''; ?>">
+                <select name="filter_status" class="form-control">
+                    <option value="">Filter by status</option>
+                    <option value="completed" <?php echo isset($filter_status) && $filter_status == 'completed' ? 'selected' : ''; ?>>Completed</option>
+                    <option value="pending" <?php echo isset($filter_status) && $filter_status == 'pending' ? 'selected' : ''; ?>>Pending</option>
+                </select>
                 <button type="submit" class="btn btn-secondary">Search</button>
             </div>
         </form>
@@ -92,13 +109,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['search'])) {
             <h3 class="text-secondary">Your Records:</h3>
             <?php if (!empty($search_results)): ?>
             <ul class="list-group">
-                <?php foreach ($search_results as $id => $task): ?>
+                <?php foreach ($search_results as $id => $taskData): ?>
                 <li
                     class="list-group-item d-flex justify-content-between align-items-center animate__animated animate__fadeIn">
-                    <span><?php echo $task; ?></span>
+                    <span><?php echo $taskData['task']; ?> (<?php echo ucfirst($taskData['status']); ?>)</span>
+                    <small class="text-muted"><?php echo $taskData['timestamp']; ?></small>
                     <div>
                         <button class="btn btn-sm btn-success"
-                            onclick="editTask(<?php echo $id; ?>, '<?php echo $task; ?>')">Edit</button>
+                            onclick="editTask(<?php echo $id; ?>, '<?php echo $taskData['task']; ?>', '<?php echo $taskData['status']; ?>')">Edit</button>
                         <form action="" method="POST" class="d-inline">
                             <input type="hidden" name="delete_id" value="<?php echo $id; ?>">
                             <button type="submit" class="btn btn-sm btn-danger">Delete</button>
@@ -120,9 +138,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['search'])) {
 
     <script>
         // Function to populate the form for editing a task
-        function editTask(id, task) {
+        function editTask(id, task, status) {
             document.getElementById('task_id').value = id; // Set the task ID
             document.getElementById('task').value = task; // Set the task value in the input field
+            document.getElementById('status').value = status; // Set the status in the dropdown
         }
 
         // Add a pulse animation when the save button is clicked
@@ -130,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['search'])) {
         saveButton.addEventListener('click', function() {
             saveButton.classList.add('animate__pulse'); // Add the pulse animation
             setTimeout(() => saveButton.classList.remove('animate__pulse'),
-            1000); // Remove the animation after 1 second
+                1000); // Remove the animation after 1 second
         });
     </script>
 </body>
